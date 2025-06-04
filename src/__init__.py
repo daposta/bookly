@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from src.db.main import init_db
 from src.books.routes import book_routes
 from src.auth.routers import auth_router
+from src.reviews.routes import reviews_router
 
 
 @asynccontextmanager
@@ -31,3 +32,4 @@ async def get_app_status():
 
 app.include_router(book_routes, prefix=f"/api/{version}/books", tags=["books"])
 app.include_router(auth_router, prefix=f"/api/{version}/auth", tags=["auth"])
+app.include_router(reviews_router, prefix=f"/api/{version}/reviews", tags=["reviews"])

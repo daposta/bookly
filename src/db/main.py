@@ -5,7 +5,7 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-DB_URL = Config.DB_URL  # "postgresql+asyncpg://postgres:s3cr3t@localhost:5435/expodb"
+DB_URL = Config.DB_URL
 
 
 import ssl

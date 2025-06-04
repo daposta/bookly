@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from datetime import timedelta
 from fastapi.responses import JSONResponse
 from .schemas import (
+    User,
     UserLoginRequest,
     UserLoginResponse,
     UserSignupRequest,
@@ -41,7 +42,15 @@ async def signup(
         )
 
     new_user = await user_service.create_user(user_data, session)
-    return new_user
+
+    return JSONResponse(
+        content={
+            "message": "Registration successful",
+            "user": {
+                "id": str(new_user.id),
+            },
+        }
+    )
 
 
 @auth_router.post(
@@ -53,7 +62,7 @@ async def login(
     email = login_data.email
     user = await user_service.get_user_by_email(email, session)
     if user is None:
-        return HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
@@ -63,8 +72,7 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
-    print("======")
-    print(user.id)
+
     access_token = create_access_token(
         user_data={
             "email": user.email,
@@ -117,6 +125,7 @@ async def get_new_access_token(
 
 @auth_router.get(
     "/me",
+    response_model=User,
     status_code=status.HTTP_200_OK,
 )
 async def get_current_user(

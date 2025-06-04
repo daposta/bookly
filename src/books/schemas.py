@@ -1,22 +1,25 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 from pydantic import BaseModel
 
-
-class Book(BaseModel):
-    id: UUID
-    title: str
-    author: str
-    description: str
-    created_at: datetime
-    update_at: datetime
+from src.reviews.schemas import Review
 
 
 class BookCreateRequest(BaseModel):
     title: str
     author: str
     description: str
+
+
+class Book(BookCreateRequest):
+    id: UUID
+    created_at: datetime
+    update_at: datetime
+
+
+class BookDetailResponse(Book):
+    reviews: List[Review]
 
 
 class BookCreateResponse(Book):
