@@ -3,6 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator, EmailStr
 
 from src.books.schemas import Book
+from src.reviews.schemas import Review
 
 
 class UserSignupRequest(BaseModel):
@@ -39,6 +40,7 @@ class User(BaseModel):
     created_at: datetime
     update_at: datetime
     books: Optional[List[Book]]
+    reviews: Optional[List[Review]]
 
 
 class UserLoginRequest(BaseModel):
