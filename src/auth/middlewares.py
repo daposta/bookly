@@ -49,20 +49,12 @@ class AccessTokenBearer(TokenBearer):
     def verify_token_data(self, token_content: dict):
         if token_content and token_content["refresh"]:
             raise InvalidToken()
-        # HTTPException(
-        #         status_code=status.HTTP_403_FORBIDDEN,
-        #         detail="Please provide an access token",
-        #     )
 
 
 class RefreshTokenBearer(TokenBearer):
     def verify_token_data(self, token_content: dict):
         if token_content and not token_content["refresh"]:
             raise RefreshTokenRequired()
-        # HTTPException(
-        #         status_code=status.HTTP_403_FORBIDDEN,
-        #         detail="Please provide a refresh token",
-        #     )
 
 
 async def get_current_user(

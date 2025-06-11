@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from src.db.main import init_db
 from src.books.routes import book_routes
 from src.auth.routers import auth_router
+from middleware import register_middleware
 from .errors import (
     InvalidRole,
     InvalidToken,
@@ -36,14 +37,7 @@ app = FastAPI(
 
 
 register_all_errors(app)
-
-
-# @app.exception_handler(500)
-# async def handle_internal_server_error(req, exc):
-#     return JSONResponse(
-#         content={"message": "Oops, something went wrong", "error_code": "server_error"},
-#         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#     )
+register_middleware(app)
 
 
 @app.get("/health-check")
