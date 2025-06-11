@@ -5,7 +5,14 @@ from fastapi.responses import JSONResponse
 from src.db.main import init_db
 from src.books.routes import book_routes
 from src.auth.routers import auth_router
-from .errors import InvalidToken, UserAlreadyExists, create_exception_handler
+from .errors import (
+    InvalidRole,
+    InvalidToken,
+    RefreshTokenRequired,
+    UserAlreadyExists,
+    create_exception_handler,
+    register_all_errors,
+)
 from src.reviews.routes import reviews_router
 
 
@@ -27,35 +34,16 @@ app = FastAPI(
     # lifespan=lifespan,
 )
 
-app.add_exception_handler(
-    UserAlreadyExists,
-    create_exception_handler(
-        status_code=status.HTTP_403_FORBIDDEN,
-        initial_detail={
-            "message": "User with email already exists",
-            "error_code": "user_exists",
-        },
-    ),
-)
 
-app.add_exception_handler(
-    InvalidToken,
-    create_exception_handler(
-        status_code=status.HTTP_403_FORBIDDEN,
-        initial_detail={
-            "message": "Token is valid or expired ",
-            "error_code": "invalid_token",
-        },
-    ),
-)
+register_all_errors(app)
 
 
-@app.exception_handler(500)
-async def handle_internal_server_error(req, exc):
-    return JSONResponse(
-        content={"message": "Oops, something went wrong", "error_code": "server_error"},
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    )
+# @app.exception_handler(500)
+# async def handle_internal_server_error(req, exc):
+#     return JSONResponse(
+#         content={"message": "Oops, something went wrong", "error_code": "server_error"},
+#         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#     )
 
 
 @app.get("/health-check")

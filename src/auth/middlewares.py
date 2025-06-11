@@ -2,7 +2,7 @@ from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
 from fastapi import Request, HTTPException, status, Depends
 
-from src.errors import InvalidToken
+from src.errors import InvalidRole, InvalidToken, RefreshTokenRequired
 from .models import User
 from src.db.main import get_session
 from src.db.redis import check_token_in_blocklist
@@ -48,19 +48,21 @@ class TokenBearer(HTTPBearer):
 class AccessTokenBearer(TokenBearer):
     def verify_token_data(self, token_content: dict):
         if token_content and token_content["refresh"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Please provide an access token",
-            )
+            raise InvalidToken()
+        # HTTPException(
+        #         status_code=status.HTTP_403_FORBIDDEN,
+        #         detail="Please provide an access token",
+        #     )
 
 
 class RefreshTokenBearer(TokenBearer):
     def verify_token_data(self, token_content: dict):
         if token_content and not token_content["refresh"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Please provide a refresh token",
-            )
+            raise RefreshTokenRequired()
+        # HTTPException(
+        #         status_code=status.HTTP_403_FORBIDDEN,
+        #         detail="Please provide a refresh token",
+        #     )
 
 
 async def get_current_user(
@@ -78,7 +80,8 @@ class RoleChecker:
 
     def __call__(self, current_user: User = Depends(get_current_user)):
         if current_user.role not in self.allowed_roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not permitted to do this operation",
-            )
+            raise InvalidRole()
+        # HTTPException(
+        #         status_code=status.HTTP_403_FORBIDDEN,
+        #         detail="You are not permitted to do this operation",
+        #     )

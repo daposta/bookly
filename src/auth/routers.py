@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from datetime import timedelta
 from fastapi.responses import JSONResponse
+
+from src.errors import InvalidToken, UserAlreadyExists, UserNotFound
 from .schemas import (
     User,
     UserLoginRequest,
@@ -36,10 +38,7 @@ async def signup(
     email = user_data.email
     user_exists = await user_service.user_exists(email, session)
     if user_exists:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User with email already exists",
-        )
+        raise UserAlreadyExists()
 
     new_user = await user_service.create_user(user_data, session)
 
@@ -62,16 +61,14 @@ async def login(
     email = login_data.email
     user = await user_service.get_user_by_email(email, session)
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-        )
+        raise UserNotFound()
+    # HTTPException(
+    #         status_code=status.HTTP_401_UNAUTHORIZED,
+    #         detail="User not found",
+    #     )
 
     if not verify_password(login_data.password, user.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-        )
+        raise UserNotFound()
 
     access_token = create_access_token(
         user_data={
@@ -110,9 +107,10 @@ async def get_new_access_token(
 ) -> dict:
     expiry_timestamp = token_info["exp"]
     if datetime.fromtimestamp(expiry_timestamp) < datetime.now():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token"
-        )
+        raise InvalidToken()
+    #  HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token"
+    #     )
 
     new_token_info = create_access_token(user_data=token_info["user"])
 

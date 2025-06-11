@@ -1,5 +1,5 @@
 from typing import Any, Callable
-from fastapi import status
+from fastapi import FastAPI, status
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
@@ -79,6 +79,12 @@ class UserNotFound(BaseException):
     #     super().__init__(*args)
 
 
+class InvalidRole(BaseException):
+    """User has the wrong role"""
+
+    pass
+
+
 def create_exception_handler(
     status_code: int, initial_detail: Any
 ) -> Callable[[Request, Exception], JSONResponse]:
@@ -86,3 +92,60 @@ def create_exception_handler(
         return JSONResponse(content=initial_detail, status_code=status_code)
 
     return exception_handler
+
+
+def register_all_errors(app: FastAPI):
+    app.add_exception_handler(
+        UserAlreadyExists,
+        create_exception_handler(
+            status_code=status.HTTP_403_FORBIDDEN,
+            initial_detail={
+                "message": "User with email already exists",
+                "error_code": "user_exists",
+            },
+        ),
+    )
+
+    app.add_exception_handler(
+        InvalidToken,
+        create_exception_handler(
+            status_code=status.HTTP_403_FORBIDDEN,
+            initial_detail={
+                "message": "Token is valid or expired",
+                "error_code": "invalid_token",
+            },
+        ),
+    )
+
+    app.add_exception_handler(
+        RefreshTokenRequired,
+        create_exception_handler(
+            status_code=status.HTTP_403_FORBIDDEN,
+            initial_detail={
+                "message": "Please provide a refresh token",
+                "error_code": "invalid_refresh_token",
+            },
+        ),
+    )
+
+    app.add_exception_handler(
+        InvalidRole,
+        create_exception_handler(
+            status_code=status.HTTP_403_FORBIDDEN,
+            initial_detail={
+                "message": "You are not permitted to do this operation",
+                "error_code": "invalid_role",
+            },
+        ),
+    )
+
+    app.add_exception_handler(
+        UserNotFound,
+        create_exception_handler(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            initial_detail={
+                "message": "User not found",
+                "error_code": "user_not_found",
+            },
+        ),
+    )
