@@ -15,7 +15,7 @@ from src.db.redis import add_jti_to_blocklist
 from sqlmodel.ext.asyncio.session import AsyncSession
 from .services import UserService
 from .utils import create_access_token, verify_password
-from .middlewares import (
+from .dependencies import (
     RefreshTokenBearer,
     AccessTokenBearer,
     get_current_user,

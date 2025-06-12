@@ -15,7 +15,7 @@ from .schemas import (
 
 from src.books.services import BookService
 from src.db.main import get_session
-from src.auth.middlewares import AccessTokenBearer, RoleChecker
+from src.auth.dependencies import AccessTokenBearer, RoleChecker
 
 book_routes = APIRouter()
 book_service = BookService()

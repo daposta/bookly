@@ -14,7 +14,7 @@ from src.books.schemas import (
 
 from src.books.services import BookService
 from src.db.main import get_session
-from src.auth.middlewares import AccessTokenBearer, RoleChecker
+from src.auth.dependencies import AccessTokenBearer, RoleChecker
 from src.reviews.services import ReviewService
 from .schemas import Review, ReviewCreateRequest
 
