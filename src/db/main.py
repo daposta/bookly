@@ -13,7 +13,8 @@ import ssl
 ssl_context = ssl.create_default_context()
 
 async_engine: AsyncEngine = create_async_engine(
-    url=DB_URL, connect_args={"ssl": False}, echo=True
+    url=DB_URL,
+    connect_args={"ssl": False},
 )
 
 

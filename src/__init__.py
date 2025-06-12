@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from src.db.main import init_db
 from src.books.routes import book_routes
 from src.auth.routers import auth_router
-from middleware import register_middleware
+from .middleware import register_middleware
 from .errors import (
     InvalidRole,
     InvalidToken,

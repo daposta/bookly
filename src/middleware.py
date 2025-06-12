@@ -1,5 +1,21 @@
 from fastapi import FastAPI
+from fastapi.requests import Request
+import time
+import logging
+
+
+logger = logging.getLogger("uvicorn.access")
+logger.disabled = True
 
 
 def register_middleware(app: FastAPI):
-    pass
+    @app.middleware("http")
+    async def custom_logging(request: Request, call_next):
+        start = time.time()
+
+        response = await call_next(request)
+        processing_time = time.time() - start
+        message = f"{request.client.host}:{request.client.port} - {request.method} - {request.url.path} - {response.status_code} completed after {processing_time:.2f}s"
+        print(message)
+        # logger.
+        return response
