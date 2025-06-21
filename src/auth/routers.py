@@ -3,6 +3,7 @@ from datetime import timedelta
 from fastapi.responses import JSONResponse
 
 from src import mail
+from src.config import Config
 from src.errors import InvalidToken, UserAlreadyExists, UserNotFound
 from src.mail import create_message
 from .schemas import (
@@ -17,7 +18,7 @@ from src.db.main import get_session
 from src.db.redis import add_jti_to_blocklist
 from sqlmodel.ext.asyncio.session import AsyncSession
 from .services import UserService
-from .utils import create_access_token, verify_password
+from .utils import create_access_token, generate_url_safe_token, verify_password
 from .dependencies import (
     RefreshTokenBearer,
     AccessTokenBearer,
@@ -40,6 +41,7 @@ async def send_mails(emails: EmailModel):
     await mail.send_message(message)
     return JSONResponse(content={"message": "Email sent successfully"})
 
+
 @auth_router.get("/verify")
 async def verify_email(emails: EmailModel):
     emails = emails.addresses
@@ -47,6 +49,7 @@ async def verify_email(emails: EmailModel):
     message = create_message(recipients=emails, subject="Welcome", body=html)
     await mail.send_message(message)
     return JSONResponse(content={"message": "Email sent successfully"})
+
 
 @auth_router.post(
     "/signup", response_model=UserSignupResponse, status_code=status.HTTP_201_CREATED
@@ -60,10 +63,20 @@ async def signup(
         raise UserAlreadyExists()
 
     new_user = await user_service.create_user(user_data, session)
+    token = generate_url_safe_token({"email": email})
+    link = f"http://{Config.DOMAIN}/api/v1/auth/verify{token}"
+    html = f"""
+    <h1>Welcome to Bookly</h1>
+    <p>Please click this <a href="{link}">Link</a> to verify your email. </p>
+    """
+    message = create_message(
+        recipients=[email], subject="Verify your account", body=html
+    )
+    await mail.send_message(message)
 
     return JSONResponse(
         content={
-            "message": "Registration successful",
+            "message": "Account created. Check your email to verify account",
             "user": {
                 "id": str(new_user.id),
             },
@@ -123,7 +136,6 @@ async def get_new_access_token(
     expiry_timestamp = token_info["exp"]
     if datetime.fromtimestamp(expiry_timestamp) < datetime.now():
         raise InvalidToken()
-    
 
     new_token_info = create_access_token(user_data=token_info["user"])
 
@@ -157,4 +169,3 @@ async def revoke_token(
     return JSONResponse(
         content={"message": "Logout successful"}, status_code=status.HTTP_200_OK
     )
-
