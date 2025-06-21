@@ -22,7 +22,7 @@ def register_middleware(app: FastAPI):
         return response
 
     app.add_middleware(
-        CORSMiddleware(allow_origins=["*"], allow_headers=["*"], allow_credentials=True)
+        CORSMiddleware,allow_origins=["*"], allow_headers=["*"], allow_credentials=True
     )
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])

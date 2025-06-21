@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from datetime import timedelta
 from fastapi.responses import JSONResponse
 
+from src import mail
 from src.errors import InvalidToken, UserAlreadyExists, UserNotFound
+from src.mail import create_message
 from .schemas import (
+    EmailModel,
     User,
     UserLoginRequest,
     UserLoginResponse,
@@ -28,6 +31,22 @@ user_service = UserService()
 role_checker = RoleChecker(["admin", "user"])
 REFRESH_TOKEN_EXPIRY = 2
 
+
+@auth_router.post("/send-mail")
+async def send_mails(emails: EmailModel):
+    emails = emails.addresses
+    html = "<h1>Welcome to Bookly</h1>"
+    message = create_message(recipients=emails, subject="Welcome", body=html)
+    await mail.send_message(message)
+    return JSONResponse(content={"message": "Email sent successfully"})
+
+@auth_router.get("/verify")
+async def verify_email(emails: EmailModel):
+    emails = emails.addresses
+    html = "<h1>Welcome to Bookly</h1>"
+    message = create_message(recipients=emails, subject="Welcome", body=html)
+    await mail.send_message(message)
+    return JSONResponse(content={"message": "Email sent successfully"})
 
 @auth_router.post(
     "/signup", response_model=UserSignupResponse, status_code=status.HTTP_201_CREATED
@@ -62,10 +81,6 @@ async def login(
     user = await user_service.get_user_by_email(email, session)
     if user is None:
         raise UserNotFound()
-    # HTTPException(
-    #         status_code=status.HTTP_401_UNAUTHORIZED,
-    #         detail="User not found",
-    #     )
 
     if not verify_password(login_data.password, user.password):
         raise UserNotFound()
@@ -108,9 +123,7 @@ async def get_new_access_token(
     expiry_timestamp = token_info["exp"]
     if datetime.fromtimestamp(expiry_timestamp) < datetime.now():
         raise InvalidToken()
-    #  HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token"
-    #     )
+    
 
     new_token_info = create_access_token(user_data=token_info["user"])
 
@@ -144,3 +157,4 @@ async def revoke_token(
     return JSONResponse(
         content={"message": "Logout successful"}, status_code=status.HTTP_200_OK
     )
+

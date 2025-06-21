@@ -53,3 +53,7 @@ class UserLoginResponse(BaseModel):
     access_token: str
     refresh_token: str
     message: str
+
+
+class EmailModel(BaseModel):
+    addresses: List[EmailStr]
