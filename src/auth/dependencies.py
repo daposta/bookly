@@ -2,7 +2,13 @@ from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
 from fastapi import Request, HTTPException, status, Depends
 
-from src.errors import InvalidRole, InvalidToken, RefreshTokenRequired
+from src.errors import (
+    AccountNotVerified,
+    InsufficientPermission,
+    InvalidRole,
+    InvalidToken,
+    RefreshTokenRequired,
+)
 from .models import User
 from src.db.main import get_session
 from src.db.redis import check_token_in_blocklist
@@ -71,9 +77,8 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     def __call__(self, current_user: User = Depends(get_current_user)):
+        if not current_user.is_verified:
+            raise AccountNotVerified()
         if current_user.role not in self.allowed_roles:
-            raise InvalidRole()
-        # HTTPException(
-        #         status_code=status.HTTP_403_FORBIDDEN,
-        #         detail="You are not permitted to do this operation",
-        #     )
+            raise InsufficientPermission()
+        return True

@@ -85,6 +85,12 @@ class InvalidRole(BaseException):
     pass
 
 
+class AccountNotVerified(BaseException):
+    """Account not verified"""
+
+    pass
+
+
 def create_exception_handler(
     status_code: int, initial_detail: Any
 ) -> Callable[[Request, Exception], JSONResponse]:
@@ -146,6 +152,18 @@ def register_all_errors(app: FastAPI):
             initial_detail={
                 "message": "User not found",
                 "error_code": "user_not_found",
+            },
+        ),
+    )
+
+    app.add_exception_handler(
+        AccountNotVerified,
+        create_exception_handler(
+            status_code=status.HTTP_403_FORBIDDEN,
+            initial_detail={
+                "message": "Account not found",
+                "error_code": "account_not_found",
+                "resolution": "Please check your email for verification details",
             },
         ),
     )
