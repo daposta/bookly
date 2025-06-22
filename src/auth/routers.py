@@ -18,7 +18,12 @@ from src.db.main import get_session
 from src.db.redis import add_jti_to_blocklist
 from sqlmodel.ext.asyncio.session import AsyncSession
 from .services import UserService
-from .utils import create_access_token, generate_url_safe_token, verify_password
+from .utils import (
+    create_access_token,
+    decode_url_safe_token,
+    generate_url_safe_token,
+    verify_password,
+)
 from .dependencies import (
     RefreshTokenBearer,
     AccessTokenBearer,
@@ -49,6 +54,30 @@ async def verify_email(emails: EmailModel):
     message = create_message(recipients=emails, subject="Welcome", body=html)
     await mail.send_message(message)
     return JSONResponse(content={"message": "Email sent successfully"})
+
+
+@auth_router.get("/verify/{token}")
+async def verify_user_account(token: str, session: AsyncSession = Depends(get_session)):
+    data = decode_url_safe_token(token)
+    user_email = data.get("email")
+    if user_email is None:
+        return JSONResponse(
+            content={"message": "Error occurred during verification"},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    user = await user_service.get_user_by_email(user_email, session)
+    if user is None:
+        raise UserNotFound()
+    await user_service.update_user(user, {"is_verified": True}, session)
+    html = "<h1>Bookly Account Activated</h1>"
+    message = create_message(
+        recipients=[user_email], subject="Account activated", body=html
+    )
+    await mail.send_message(message)
+    return JSONResponse(
+        content={"message": "Account verified successfuly"},
+        status_code=status.HTTP_200_OK,
+    )
 
 
 @auth_router.post(
