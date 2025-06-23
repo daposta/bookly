@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, BackgroundTasks, status
 from datetime import timedelta
 from fastapi.responses import JSONResponse
 
@@ -41,7 +41,7 @@ role_checker = RoleChecker(["admin", "user"])
 REFRESH_TOKEN_EXPIRY = 2
 
 
-@auth_router.get("/password-reset-request/{token}")
+@auth_router.post("/password-reset-request/{token}")
 async def confirm_password_reset(
     token: str,
     passwords_data: PasswordResetConfirmationSchema,
@@ -136,7 +136,9 @@ async def verify_user_account(token: str, session: AsyncSession = Depends(get_se
     "/signup", response_model=UserSignupResponse, status_code=status.HTTP_201_CREATED
 )
 async def signup(
-    user_data: UserSignupRequest, session: AsyncSession = Depends(get_session)
+    user_data: UserSignupRequest,
+    bg_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_session),
 ):
     email = user_data.email
     user_exists = await user_service.user_exists(email, session)
@@ -150,10 +152,6 @@ async def signup(
     <h1>Welcome to Bookly</h1>
     <p>Please click this <a href="{link}">Link</a> to verify your email. </p>
     """
-    message = create_message(
-        recipients=[email], subject="Verify your account", body=html
-    )
-    await mail.send_message(message)
 
     return JSONResponse(
         content={

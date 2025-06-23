@@ -26,4 +26,3 @@ def create_message(recipients: list[str], subject: str, body: str):
 
 
 mail = FastMail(config=mail_conf)
-# mail.send_message()
