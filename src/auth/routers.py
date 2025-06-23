@@ -8,6 +8,8 @@ from src.errors import InvalidToken, UserAlreadyExists, UserNotFound
 from src.mail import create_message
 from .schemas import (
     EmailModel,
+    PasswordResetConfirmationSchema,
+    PasswordResetRequestSchema,
     User,
     UserLoginRequest,
     UserLoginResponse,
@@ -21,6 +23,7 @@ from .services import UserService
 from .utils import (
     create_access_token,
     decode_url_safe_token,
+    generate_password_hash,
     generate_url_safe_token,
     verify_password,
 )
@@ -38,22 +41,71 @@ role_checker = RoleChecker(["admin", "user"])
 REFRESH_TOKEN_EXPIRY = 2
 
 
-@auth_router.post("/send-mail")
-async def send_mails(emails: EmailModel):
-    emails = emails.addresses
-    html = "<h1>Welcome to Bookly</h1>"
-    message = create_message(recipients=emails, subject="Welcome", body=html)
+@auth_router.get("/password-reset-request/{token}")
+async def confirm_password_reset(
+    token: str,
+    passwords_data: PasswordResetConfirmationSchema,
+    session: AsyncSession = Depends(get_session),
+):
+    token_data = decode_url_safe_token(token)
+    user_email = token_data.get("email")
+    if user_email is None:
+        return JSONResponse(
+            content={"message": "Error occurred during verification"},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    user = await user_service.get_user_by_email(user_email, session)
+    if user is None:
+        raise UserNotFound()
+    await user_service.update_user(
+        user, {"password": generate_password_hash(passwords_data.new_password)}, session
+    )
+    html = "<h1>Your password has been reset successfully</h1>"
+    message = create_message(
+        recipients=[user_email], subject="Password reset successful", body=html
+    )
     await mail.send_message(message)
-    return JSONResponse(content={"message": "Email sent successfully"})
+    return JSONResponse(
+        content={"message": "Password reset successful"},
+        status_code=status.HTTP_200_OK,
+    )
 
 
-@auth_router.get("/verify")
-async def verify_email(emails: EmailModel):
-    emails = emails.addresses
-    html = "<h1>Welcome to Bookly</h1>"
-    message = create_message(recipients=emails, subject="Welcome", body=html)
+@auth_router.post(
+    "/reset-password",
+    status_code=status.HTTP_201_CREATED,
+)
+async def request_password_reset(
+    email_data: PasswordResetRequestSchema, session: AsyncSession = Depends(get_session)
+):
+    email = email_data.email
+
+    token = generate_url_safe_token({"email": email})
+    link = f"http://{Config.DOMAIN}/api/v1/auth/password-reset-request/{token}"
+    html = f"""
+    <h1>Bookly: Password Reset</h1>
+    <p>Please click this <a href="{link}">Link</a> to reset your password. </p>
+    """
+    message = create_message(
+        recipients=[email], subject="Reset your password", body=html
+    )
     await mail.send_message(message)
-    return JSONResponse(content={"message": "Email sent successfully"})
+
+    return JSONResponse(
+        content={
+            "message": "Check your email for instructions to reset your password",
+        },
+        status_code=status.HTTP_200_OK,
+    )
+
+
+# @auth_router.get("/verify")
+# async def verify_email(emails: EmailModel):
+#     emails = emails.addresses
+#     html = "<h1>Welcome to Bookly</h1>"
+#     message = create_message(recipients=emails, subject="Welcome", body=html)
+#     await mail.send_message(message)
+#     return JSONResponse(content={"message": "Email sent successfully"})
 
 
 @auth_router.get("/verify/{token}")
@@ -93,7 +145,7 @@ async def signup(
 
     new_user = await user_service.create_user(user_data, session)
     token = generate_url_safe_token({"email": email})
-    link = f"http://{Config.DOMAIN}/api/v1/auth/verify{token}"
+    link = f"http://{Config.DOMAIN}/api/v1/auth/verify/{token}"
     html = f"""
     <h1>Welcome to Bookly</h1>
     <p>Please click this <a href="{link}">Link</a> to verify your email. </p>

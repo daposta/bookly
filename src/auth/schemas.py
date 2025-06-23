@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator, EmailStr
+from pydantic import BaseModel, Field, field_validator, EmailStr, model_validator
 
 from src.books.schemas import Book
 from src.reviews.schemas import Review
@@ -57,3 +57,28 @@ class UserLoginResponse(BaseModel):
 
 class EmailModel(BaseModel):
     addresses: List[EmailStr]
+
+
+class PasswordResetRequestSchema(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirmationSchema(BaseModel):
+    new_password: str
+    confirm_new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_passwords(cls, value: str):
+        if len(value) < 8 or not any(char.isdigit() for char in value):
+            raise ValueError(
+                "Password must be at least 8 chars long and must include at least one digit"
+            )
+
+        return value
+
+    @model_validator(mode="after")
+    def validate_matching_passwords(self):
+        if self.new_password != self.confirm_new_password:
+            raise ValueError("New password and confirmation do not match.")
+        return self
