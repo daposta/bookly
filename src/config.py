@@ -21,5 +21,6 @@ class Settings(BaseSettings):
 
 
 Config = Settings()
-BROKER_URL = Config.REDIS_URL
-RESULT_BACKEND = Config.REDIS_URL
+broker_url = Config.REDIS_URL
+result_backend = Config.REDIS_URL
+broker_connection_retry_on_startup = True

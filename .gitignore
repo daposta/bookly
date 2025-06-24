@@ -5,3 +5,4 @@ migrations/versions/**
 main.py
 main_2.py
 .DS_Store
+.vscode/

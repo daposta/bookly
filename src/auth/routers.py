@@ -3,6 +3,7 @@ from datetime import timedelta
 from fastapi.responses import JSONResponse
 
 from src import mail
+from src.celery_tasks import send_email
 from src.config import Config
 from src.errors import InvalidToken, UserAlreadyExists, UserNotFound
 from src.mail import create_message
@@ -57,13 +58,9 @@ async def confirm_password_reset(
     user = await user_service.get_user_by_email(user_email, session)
     if user is None:
         raise UserNotFound()
-    await user_service.update_user(
-        user, {"password": generate_password_hash(passwords_data.new_password)}, session
-    )
+    await user_service.update_user(user, {"password": generate_password_hash(passwords_data.new_password)}, session)
     html = "<h1>Your password has been reset successfully</h1>"
-    message = create_message(
-        recipients=[user_email], subject="Password reset successful", body=html
-    )
+    message = create_message(recipients=[user_email], subject="Password reset successful", body=html)
     await mail.send_message(message)
     return JSONResponse(
         content={"message": "Password reset successful"},
@@ -75,9 +72,7 @@ async def confirm_password_reset(
     "/reset-password",
     status_code=status.HTTP_201_CREATED,
 )
-async def request_password_reset(
-    email_data: PasswordResetRequestSchema, session: AsyncSession = Depends(get_session)
-):
+async def request_password_reset(email_data: PasswordResetRequestSchema, session: AsyncSession = Depends(get_session)):
     email = email_data.email
 
     token = generate_url_safe_token({"email": email})
@@ -86,9 +81,7 @@ async def request_password_reset(
     <h1>Bookly: Password Reset</h1>
     <p>Please click this <a href="{link}">Link</a> to reset your password. </p>
     """
-    message = create_message(
-        recipients=[email], subject="Reset your password", body=html
-    )
+    message = create_message(recipients=[email], subject="Reset your password", body=html)
     await mail.send_message(message)
 
     return JSONResponse(
@@ -122,19 +115,15 @@ async def verify_user_account(token: str, session: AsyncSession = Depends(get_se
         raise UserNotFound()
     await user_service.update_user(user, {"is_verified": True}, session)
     html = "<h1>Bookly Account Activated</h1>"
-    message = create_message(
-        recipients=[user_email], subject="Account activated", body=html
-    )
-    await mail.send_message(message)
+
+    send_email.delay([user_email], "Bookly Account Activated", html)
     return JSONResponse(
         content={"message": "Account verified successfuly"},
         status_code=status.HTTP_200_OK,
     )
 
 
-@auth_router.post(
-    "/signup", response_model=UserSignupResponse, status_code=status.HTTP_201_CREATED
-)
+@auth_router.post("/signup", response_model=UserSignupResponse, status_code=status.HTTP_201_CREATED)
 async def signup(
     user_data: UserSignupRequest,
     bg_tasks: BackgroundTasks,
@@ -152,7 +141,8 @@ async def signup(
     <h1>Welcome to Bookly</h1>
     <p>Please click this <a href="{link}">Link</a> to verify your email. </p>
     """
-
+    subject = "Verify your email"
+    send_email.delay([email], subject, html)
     return JSONResponse(
         content={
             "message": "Account created. Check your email to verify account",
@@ -163,12 +153,8 @@ async def signup(
     )
 
 
-@auth_router.post(
-    "/login", response_model=UserLoginResponse, status_code=status.HTTP_201_CREATED
-)
-async def login(
-    login_data: UserLoginRequest, session: AsyncSession = Depends(get_session)
-):
+@auth_router.post("/login", response_model=UserLoginResponse, status_code=status.HTTP_201_CREATED)
+async def login(login_data: UserLoginRequest, session: AsyncSession = Depends(get_session)):
     email = login_data.email
     user = await user_service.get_user_by_email(email, session)
     if user is None:
@@ -230,9 +216,7 @@ async def get_new_access_token(
     response_model=User,
     status_code=status.HTTP_200_OK,
 )
-async def get_current_user(
-    user=Depends(get_current_user), _: bool = Depends(role_checker)
-):
+async def get_current_user(user=Depends(get_current_user), _: bool = Depends(role_checker)):
     return user
 
 
@@ -245,6 +229,4 @@ async def revoke_token(
 ):
     jti = token_info["jti"]
     await add_jti_to_blocklist(jti)
-    return JSONResponse(
-        content={"message": "Logout successful"}, status_code=status.HTTP_200_OK
-    )
+    return JSONResponse(content={"message": "Logout successful"}, status_code=status.HTTP_200_OK)

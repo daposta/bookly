@@ -1,5 +1,6 @@
 from celery import Celery
-
+from pydantic import EmailStr
+from asgiref.sync import async_to_sync
 from src import mail
 from src.mail import create_message
 
@@ -8,10 +9,9 @@ celery_app.config_from_object("src.config")
 
 
 @celery_app.task()
-def send_email(email, subject, html):
+def send_email(recipients: list[EmailStr], subject: str, body: str):
     message = create_message(
-        recipients=[email], subject="Verify your account", body=html
+        recipients=recipients, subject="Verify your account", body=body
     )
 
-    # bg_tasks.add_task(mail.send_message, message)
-    mail.send_message.delay(message)
+    async_to_sync(mail.send_message)(message)
