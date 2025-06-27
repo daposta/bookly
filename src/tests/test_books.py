@@ -18,7 +18,7 @@ def test_add_book(fake_session, fake_book_service, test_client):
 
     }
 
-    # user_id
+
     book_data= BookCreateRequest(**book_data_dict)
     response = test_client.post(url=f"{books_prefix}", json=book_data.model_dump())
 
